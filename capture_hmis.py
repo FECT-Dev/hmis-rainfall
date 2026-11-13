@@ -8,6 +8,7 @@ IN_CI = os.getenv("CI") == "true"   # GitHub sets CI=true automatically
 HEADLESS = IN_CI                    # no browser window on GitHub
 NEEDS_LOGIN = not IN_CI             # manual login only when run on your PC
 WAIT_SECONDS = 6                    # wait after each click for data to load
+MENU_ITEM_TEXT = "Rainfall"         # NEW: name of the side-menu item to click on GitHub
 
 # Text each response's "message" must contain, so a late response from
 # another period is never saved under the wrong name.
@@ -24,7 +25,6 @@ EXPECTED_MESSAGE = {
 # ===== END CONFIG =====
 
 import pathlib, datetime
-from zoneinfo import ZoneInfo
 import pandas as pd
 from playwright.sync_api import sync_playwright
 
@@ -32,8 +32,9 @@ from playwright.sync_api import sync_playwright
 def main():
     out = pathlib.Path(OUTPUT_DIR)
     out.mkdir(exist_ok=True)
-    # Sri Lanka time, so file stamps match the site's reading times
-    stamp = datetime.datetime.now(ZoneInfo("Asia/Colombo")).strftime("%Y%m%d_%H%M")
+    # Sri Lanka time (UTC+5:30, no daylight saving), so file stamps match the site's reading times
+    SL_TZ = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    stamp = datetime.datetime.now(SL_TZ).strftime("%Y%m%d_%H%M")
     saved = 0
 
     with sync_playwright() as p:
@@ -60,6 +61,7 @@ def main():
             input("Log in, open the Real-Time Rainfall Map, then press Enter here...")
         else:
             page.wait_for_load_state("networkidle")
+            page.locator(".menu-item", has_text=MENU_ITEM_TEXT).click()   # NEW: open the rainfall map
             page.wait_for_timeout(8000)
 
         for period in PERIODS:
